@@ -1,29 +1,29 @@
 output "vpc_id" {
-  description = "ID of the created VPC"
-  value       = aws_vpc.main.id
+  description = "ID of the VPC"
+  value       = aws_vpc.this.id
+}
+
+output "vpc_cidr_block" {
+  description = "CIDR block of the VPC"
+  value       = aws_vpc.this.cidr_block
 }
 
 output "private_subnet_ids" {
   description = "IDs of private subnets"
-  value       = aws_subnet.private[*].id
+  value       = [for s in aws_subnet.private : s.id]
 }
 
 output "public_subnet_ids" {
   description = "IDs of public subnets"
-  value       = aws_subnet.public[*].id
-}
-
-output "vpc_cidr_block" {
-  description = "The CIDR block of the VPC"
-  value       = aws_vpc.main.cidr_block
+  value       = [for s in aws_subnet.public : s.id]
 }
 
 output "nat_gateway_id" {
   description = "ID of the NAT gateway"
-  value       = aws_nat_gateway.main.id
+  value       = aws_nat_gateway.this.id
 }
 
 output "default_security_group_id" {
-  description = "ID of the default VPC security group"
+  description = "ID of the default security group"
   value       = aws_security_group.default.id
 }

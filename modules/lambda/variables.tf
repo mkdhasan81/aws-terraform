@@ -5,26 +5,32 @@ variable "function_name" {
 
 variable "runtime" {
   type        = string
-  description = "Lambda function runtime"
+  description = "Lambda runtime identifier"
   default     = "python3.12"
 }
 
 variable "handler" {
   type        = string
-  description = "Lambda function handler (file.method)"
+  description = "Lambda handler in format file.method"
   default     = "index.handler"
 }
 
 variable "memory_size" {
   type        = number
-  description = "Lambda function memory in MB"
+  description = "Lambda memory in MB"
   default     = 128
 }
 
 variable "timeout" {
   type        = number
-  description = "Lambda function timeout in seconds"
+  description = "Lambda timeout in seconds"
   default     = 30
+}
+
+variable "environment_variables" {
+  type        = map(string)
+  description = "Environment variables injected into the Lambda function"
+  default     = {}
 }
 
 variable "vpc_id" {
@@ -39,7 +45,7 @@ variable "private_subnet_ids" {
 
 variable "vpc_cidr_block" {
   type        = string
-  description = "VPC CIDR block used for Lambda security group outbound rules"
+  description = "VPC CIDR block for Lambda security group egress rule"
 }
 
 variable "lambda_role_arn" {
@@ -49,7 +55,7 @@ variable "lambda_role_arn" {
 
 variable "deployment_package_path" {
   type        = string
-  description = "Path to Lambda deployment zip. Empty string creates a placeholder."
+  description = "Path to Lambda deployment zip. Empty = placeholder handler."
   default     = ""
 }
 

@@ -1,42 +1,27 @@
 locals {
+  env  = "dev"
+  name = local.env
+
   common_tags = merge(var.tags, {
+    Environment = local.env
     ManagedBy   = "terraform"
-    Environment = "dev"
-    Module      = "aws-terraform"
+    Region      = var.aws_region
   })
 }
 
 module "vpc" {
   source = "../../modules/vpc"
 
-  vpc_cidr_block       = var.vpc_cidr_block
-  availability_zones   = var.availability_zones
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-  cluster_name         = var.cluster_name
-  tags                 = local.common_tags
+  name           = local.name
+  vpc_cidr_block = var.vpc_cidr_block
+  tags           = local.common_tags
 }
 
-module "iam" {
-  source = "../../modules/iam"
+module "iam_lambda" {
+  source = "../../modules/iam/lambda"
 
-  tags = local.common_tags
-}
-
-module "eks" {
-  source = "../../modules/eks"
-
-  cluster_name        = var.cluster_name
-  kubernetes_version  = var.kubernetes_version
-  vpc_id              = module.vpc.vpc_id
-  private_subnet_ids  = module.vpc.private_subnet_ids
-  cluster_role_arn    = module.iam.eks_cluster_role_arn
-  node_role_arn       = module.iam.eks_node_role_arn
-  node_instance_types = var.node_instance_types
-  node_min_size       = var.node_min_size
-  node_max_size       = var.node_max_size
-  node_desired_size   = var.node_desired_size
-  tags                = local.common_tags
+  name_prefix = "${local.env}-"
+  tags        = local.common_tags
 }
 
 module "lambda" {
@@ -47,10 +32,23 @@ module "lambda" {
   handler                 = var.lambda_handler
   memory_size             = var.lambda_memory_size
   timeout                 = var.lambda_timeout
+  environment_variables   = var.lambda_environment_variables
   vpc_id                  = module.vpc.vpc_id
   private_subnet_ids      = module.vpc.private_subnet_ids
   vpc_cidr_block          = module.vpc.vpc_cidr_block
-  lambda_role_arn         = module.iam.lambda_role_arn
+  lambda_role_arn         = module.iam_lambda.role_arn
   deployment_package_path = var.lambda_deployment_package_path
   tags                    = local.common_tags
+}
+
+module "api_gateway" {
+  source = "../../modules/api_gateway"
+
+  name                 = var.lambda_function_name
+  lambda_invoke_arn    = module.lambda.invoke_arn
+  lambda_function_name = module.lambda.function_name
+  stage_name           = local.env
+  throttling_rate      = var.api_throttling_rate
+  throttling_burst     = var.api_throttling_burst
+  tags                 = local.common_tags
 }

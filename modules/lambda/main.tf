@@ -1,23 +1,23 @@
 locals {
-  use_placeholder = var.deployment_package_path == ""
+  use_placeholder  = var.deployment_package_path == ""
+  package_path     = local.use_placeholder ? data.archive_file.placeholder[0].output_path : var.deployment_package_path
+  package_hash     = local.use_placeholder ? data.archive_file.placeholder[0].output_base64sha256 : filebase64sha256(var.deployment_package_path)
 }
 
-# Placeholder zip when no deployment package is provided
 data "archive_file" "placeholder" {
   count       = local.use_placeholder ? 1 : 0
   type        = "zip"
   output_path = "${path.module}/placeholder.zip"
 
   source {
-    content  = "def handler(event, context):\n    return {'statusCode': 200, 'body': 'placeholder'}\n"
+    content  = "def handler(event, context):\n    return {'statusCode': 200, 'body': 'Hello from ${var.function_name}'}\n"
     filename = "index.py"
   }
 }
 
-# Lambda Security Group — deny all inbound, allow outbound to VPC only
-resource "aws_security_group" "lambda" {
+resource "aws_security_group" "this" {
   name        = "${var.function_name}-sg"
-  description = "Lambda function security group: deny inbound, allow outbound to VPC"
+  description = "Lambda SG: deny all inbound, allow outbound to VPC only"
   vpc_id      = var.vpc_id
 
   egress {
@@ -25,27 +25,42 @@ resource "aws_security_group" "lambda" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [var.vpc_cidr_block]
-    description = "Allow outbound to VPC CIDR"
+    description = "Allow outbound to VPC CIDR only"
   }
 
   tags = merge(var.tags, { Name = "${var.function_name}-sg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-# Lambda Function
-resource "aws_lambda_function" "main" {
-  function_name = var.function_name
-  role          = var.lambda_role_arn
-  runtime       = var.runtime
-  handler       = var.handler
-  memory_size   = var.memory_size
-  timeout       = var.timeout
+resource "aws_lambda_function" "this" {
+  function_name    = var.function_name
+  role             = var.lambda_role_arn
+  runtime          = var.runtime
+  handler          = var.handler
+  memory_size      = var.memory_size
+  timeout          = var.timeout
+  filename         = local.package_path
+  source_code_hash = local.package_hash
 
-  filename = local.use_placeholder ? data.archive_file.placeholder[0].output_path : var.deployment_package_path
+  dynamic "environment" {
+    for_each = length(var.environment_variables) > 0 ? [var.environment_variables] : []
+    content {
+      variables = environment.value
+    }
+  }
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
+    security_group_ids = [aws_security_group.this.id]
   }
 
   tags = var.tags
+
+  lifecycle {
+    prevent_destroy = false # set to true in production
+    ignore_changes  = [filename] # prevent redeploy on unrelated plan runs
+  }
 }

@@ -13,17 +13,27 @@ output "public_subnet_ids" {
   value       = module.vpc.public_subnet_ids
 }
 
-output "eks_cluster_endpoint" {
-  description = "EKS cluster API endpoint"
-  value       = module.eks.cluster_endpoint
-}
-
-output "eks_cluster_name" {
-  description = "Name of the EKS cluster"
-  value       = module.eks.cluster_name
-}
-
 output "lambda_function_arn" {
   description = "ARN of the Lambda function"
   value       = module.lambda.function_arn
+}
+
+output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = module.lambda.function_name
+}
+
+output "lambda_role_arn" {
+  description = "ARN of the Lambda IAM role"
+  value       = module.iam_lambda.role_arn
+}
+
+output "api_gateway_url" {
+  description = "Invoke URL for the API Gateway stage"
+  value       = module.api_gateway.invoke_url
+}
+
+output "api_gateway_id" {
+  description = "ID of the REST API"
+  value       = module.api_gateway.api_id
 }

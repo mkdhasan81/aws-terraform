@@ -58,6 +58,18 @@ variable "node_desired_size" {
   }
 }
 
+variable "cluster_endpoint_public_access" {
+  type        = bool
+  description = "Enable public access to the EKS cluster API endpoint"
+  default     = true
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks allowed to access the public EKS API endpoint"
+  default     = ["0.0.0.0/0"]
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to all EKS resources"

@@ -1,133 +1,142 @@
 locals {
-  # Use provided AZs or fall back to data source
   azs = length(var.availability_zones) > 0 ? var.availability_zones : data.aws_availability_zones.available.names
 
-  # Compute subnet CIDRs if not provided
   private_subnet_cidrs = length(var.private_subnet_cidrs) > 0 ? var.private_subnet_cidrs : [
-    for i, az in local.azs : cidrsubnet(var.vpc_cidr_block, 4, i)
+    for i in range(length(local.azs)) : cidrsubnet(var.vpc_cidr_block, 4, i)
   ]
   public_subnet_cidrs = length(var.public_subnet_cidrs) > 0 ? var.public_subnet_cidrs : [
-    for i, az in local.azs : cidrsubnet(var.vpc_cidr_block, 4, i + 8)
+    for i in range(length(local.azs)) : cidrsubnet(var.vpc_cidr_block, 4, i + 8)
   ]
+
+  # Build subnet maps keyed by AZ for for_each
+  private_subnets = {
+    for i, az in local.azs : az => {
+      cidr  = local.private_subnet_cidrs[i]
+      index = i + 1
+    }
+  }
+  public_subnets = {
+    for i, az in local.azs : az => {
+      cidr  = local.public_subnet_cidrs[i]
+      index = i + 1
+    }
+  }
+
+  eks_private_tags = var.cluster_name != "" ? {
+    "kubernetes.io/role/internal-elb"           = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+  } : {}
+
+  eks_public_tags = var.cluster_name != "" ? {
+    "kubernetes.io/role/elb"                    = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+  } : {}
 }
 
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# VPC
-resource "aws_vpc" "main" {
+resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = var.enable_dns_support
   enable_dns_hostnames = var.enable_dns_hostnames
 
-  tags = merge(var.tags, { Name = "main-vpc" })
+  tags = merge(var.tags, { Name = "${var.name}-vpc" })
+
+  lifecycle {
+    prevent_destroy = false # set to true in production
+  }
 }
 
-# Private Subnets
 resource "aws_subnet" "private" {
-  count             = length(local.azs)
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = local.private_subnet_cidrs[count.index]
-  availability_zone = local.azs[count.index]
+  for_each = local.private_subnets
 
-  tags = merge(
-    var.tags,
-    { Name = "private-subnet-${count.index + 1}" },
-    var.cluster_name != "" ? {
-      "kubernetes.io/role/internal-elb"           = "1"
-      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    } : {}
-  )
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = each.value.cidr
+  availability_zone = each.key
+
+  tags = merge(var.tags, local.eks_private_tags, {
+    Name = "${var.name}-private-${each.value.index}"
+    Tier = "private"
+  })
 }
 
-# Public Subnets
 resource "aws_subnet" "public" {
-  count                   = length(local.azs)
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = local.public_subnet_cidrs[count.index]
-  availability_zone       = local.azs[count.index]
+  for_each = local.public_subnets
+
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = each.value.cidr
+  availability_zone       = each.key
   map_public_ip_on_launch = true
 
-  tags = merge(
-    var.tags,
-    { Name = "public-subnet-${count.index + 1}" },
-    var.cluster_name != "" ? {
-      "kubernetes.io/role/elb"                    = "1"
-      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    } : {}
-  )
+  tags = merge(var.tags, local.eks_public_tags, {
+    Name = "${var.name}-public-${each.value.index}"
+    Tier = "public"
+  })
 }
 
-# Internet Gateway
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_internet_gateway" "this" {
+  vpc_id = aws_vpc.this.id
 
-  tags = merge(var.tags, { Name = "main-igw" })
+  tags = merge(var.tags, { Name = "${var.name}-igw" })
 }
 
-# Elastic IP for NAT Gateway
 resource "aws_eip" "nat" {
-  domain = "vpc"
+  domain     = "vpc"
+  depends_on = [aws_internet_gateway.this]
 
-  tags = merge(var.tags, { Name = "nat-eip" })
-
-  depends_on = [aws_internet_gateway.main]
+  tags = merge(var.tags, { Name = "${var.name}-nat-eip" })
 }
 
-# NAT Gateway (single, in first public subnet)
-resource "aws_nat_gateway" "main" {
+resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
+  subnet_id     = values(aws_subnet.public)[0].id
+  depends_on    = [aws_internet_gateway.this]
 
-  tags = merge(var.tags, { Name = "main-nat" })
-
-  depends_on = [aws_internet_gateway.main]
+  tags = merge(var.tags, { Name = "${var.name}-nat" })
 }
 
-# Public Route Table
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.this.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = aws_internet_gateway.this.id
   }
 
-  tags = merge(var.tags, { Name = "public-rt" })
+  tags = merge(var.tags, { Name = "${var.name}-public-rt" })
 }
 
-# Private Route Table
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.this.id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+    nat_gateway_id = aws_nat_gateway.this.id
   }
 
-  tags = merge(var.tags, { Name = "private-rt" })
+  tags = merge(var.tags, { Name = "${var.name}-private-rt" })
 }
 
-# Public Route Table Associations
 resource "aws_route_table_association" "public" {
-  count          = length(aws_subnet.public)
-  subnet_id      = aws_subnet.public[count.index].id
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
   route_table_id = aws_route_table.public.id
 }
 
-# Private Route Table Associations
 resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
-  subnet_id      = aws_subnet.private[count.index].id
+  for_each = aws_subnet.private
+
+  subnet_id      = each.value.id
   route_table_id = aws_route_table.private.id
 }
 
-# Default Security Group — deny all inbound, allow all outbound
 resource "aws_security_group" "default" {
-  name        = "vpc-default-sg"
-  description = "Default VPC security group: deny all inbound, allow all outbound"
-  vpc_id      = aws_vpc.main.id
+  name        = "${var.name}-default-sg"
+  description = "Default VPC SG: deny all inbound, allow all outbound"
+  vpc_id      = aws_vpc.this.id
 
   egress {
     from_port   = 0
@@ -136,5 +145,9 @@ resource "aws_security_group" "default" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(var.tags, { Name = "vpc-default-sg" })
+  tags = merge(var.tags, { Name = "${var.name}-default-sg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }

@@ -13,6 +13,11 @@ crash.*.log
 
 # Sensitive variable files — never commit secrets
 *.tfvars.json
+
+# AWS credential CSV files — never commit these
+*accessKeys.csv
+*credentials.csv
+*.csv
 override.tf
 override.tf.json
 *_override.tf
