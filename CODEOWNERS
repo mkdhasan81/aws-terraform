@@ -1,0 +1,9 @@
+# Global owner — all PRs require review
+* @platform-team
+
+# Module-specific owners
+modules/eks/     @platform-team
+modules/vpc/     @platform-team
+modules/iam/     @platform-team
+modules/lambda/  @platform-team
+environments/    @platform-team
