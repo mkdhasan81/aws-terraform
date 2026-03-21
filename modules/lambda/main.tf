@@ -1,7 +1,7 @@
 locals {
-  use_placeholder  = var.deployment_package_path == ""
-  package_path     = local.use_placeholder ? data.archive_file.placeholder[0].output_path : var.deployment_package_path
-  package_hash     = local.use_placeholder ? data.archive_file.placeholder[0].output_base64sha256 : filebase64sha256(var.deployment_package_path)
+  use_placeholder = var.deployment_package_path == ""
+  package_path    = local.use_placeholder ? data.archive_file.placeholder[0].output_path : var.deployment_package_path
+  package_hash    = local.use_placeholder ? data.archive_file.placeholder[0].output_base64sha256 : filebase64sha256(var.deployment_package_path)
 }
 
 data "archive_file" "placeholder" {
@@ -60,7 +60,7 @@ resource "aws_lambda_function" "this" {
   tags = var.tags
 
   lifecycle {
-    prevent_destroy = false # set to true in production
+    prevent_destroy = false      # set to true in production
     ignore_changes  = [filename] # prevent redeploy on unrelated plan runs
   }
 }
