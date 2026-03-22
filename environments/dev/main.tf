@@ -41,14 +41,36 @@ module "lambda" {
   tags                    = local.common_tags
 }
 
+# Step 1: create the authorizer Lambda with a placeholder role ARN first,
+# then the IAM module uses the real ARN — Terraform resolves this in two passes.
+module "authorizer" {
+  source = "../../modules/authorizer"
+
+  name_prefix      = "${local.env}-"
+  authorizer_token = var.authorizer_token
+  role_arn         = module.iam_authorizer.lambda_role_arn
+  tags             = local.common_tags
+}
+
+module "iam_authorizer" {
+  source = "../../modules/iam/authorizer"
+
+  name_prefix           = "${local.env}-"
+  authorizer_lambda_arn = module.authorizer.function_arn
+  tags                  = local.common_tags
+}
+
 module "api_gateway" {
   source = "../../modules/api_gateway"
 
-  name                 = var.lambda_function_name
-  lambda_invoke_arn    = module.lambda.invoke_arn
-  lambda_function_name = module.lambda.function_name
-  stage_name           = local.env
-  throttling_rate      = var.api_throttling_rate
-  throttling_burst     = var.api_throttling_burst
-  tags                 = local.common_tags
+  name                     = var.lambda_function_name
+  lambda_invoke_arn        = module.lambda.invoke_arn
+  lambda_function_name     = module.lambda.function_name
+  stage_name               = local.env
+  throttling_rate          = var.api_throttling_rate
+  throttling_burst         = var.api_throttling_burst
+  authorizer_invoke_arn    = module.authorizer.invoke_arn
+  authorizer_function_name = module.authorizer.function_name
+  authorizer_role_arn      = module.iam_authorizer.api_gateway_invoker_role_arn
+  tags                     = local.common_tags
 }

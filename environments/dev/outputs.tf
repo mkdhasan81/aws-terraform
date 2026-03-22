@@ -37,3 +37,8 @@ output "api_gateway_id" {
   description = "ID of the REST API"
   value       = module.api_gateway.api_id
 }
+
+output "authorizer_function_name" {
+  description = "Name of the API Gateway authorizer Lambda"
+  value       = module.authorizer.function_name
+}

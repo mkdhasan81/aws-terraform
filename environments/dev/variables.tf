@@ -90,6 +90,12 @@ variable "api_throttling_burst" {
   default     = 200
 }
 
+variable "authorizer_token" {
+  type        = string
+  description = "Secret bearer token for the API Gateway Lambda authorizer. Pass via TF_VAR_authorizer_token env var — never commit this value."
+  sensitive   = true
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to all resources"
