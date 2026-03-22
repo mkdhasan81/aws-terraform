@@ -41,15 +41,24 @@ module "lambda" {
   tags                    = local.common_tags
 }
 
-# Step 1: create the authorizer Lambda with a placeholder role ARN first,
-# then the IAM module uses the real ARN — Terraform resolves this in two passes.
+module "cognito" {
+  source = "../../modules/cognito"
+
+  name_prefix                    = "${local.env}-"
+  api_resource_server_identifier = var.api_resource_server_identifier
+  resource_server_scopes         = var.resource_server_scopes
+  tags                           = local.common_tags
+}
+
 module "authorizer" {
   source = "../../modules/authorizer"
 
-  name_prefix      = "${local.env}-"
-  authorizer_token = var.authorizer_token
-  role_arn         = module.iam_authorizer.lambda_role_arn
-  tags             = local.common_tags
+  name_prefix    = "${local.env}-"
+  jwks_uri       = module.cognito.jwks_uri
+  issuer         = module.cognito.issuer
+  required_scope = "${var.api_resource_server_identifier}/${var.required_scope}"
+  role_arn       = module.iam_authorizer.lambda_role_arn
+  tags           = local.common_tags
 }
 
 module "iam_authorizer" {

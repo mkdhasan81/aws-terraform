@@ -42,3 +42,19 @@ output "authorizer_function_name" {
   description = "Name of the API Gateway authorizer Lambda"
   value       = module.authorizer.function_name
 }
+
+output "cognito_token_endpoint" {
+  description = "OAuth2 token endpoint — POST here to get an M2M access token"
+  value       = module.cognito.token_endpoint
+}
+
+output "cognito_client_id" {
+  description = "Cognito M2M app client ID"
+  value       = module.cognito.client_id
+}
+
+output "cognito_client_secret" {
+  description = "Cognito M2M app client secret (sensitive)"
+  value       = module.cognito.client_secret
+  sensitive   = true
+}

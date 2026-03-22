@@ -90,10 +90,28 @@ variable "api_throttling_burst" {
   default     = 200
 }
 
-variable "authorizer_token" {
+variable "api_resource_server_identifier" {
   type        = string
-  description = "Secret bearer token for the API Gateway Lambda authorizer. Pass via TF_VAR_authorizer_token env var — never commit this value."
-  sensitive   = true
+  description = "URI identifier for the Cognito resource server (e.g. https://dev-api)"
+  default     = "https://dev-api"
+}
+
+variable "resource_server_scopes" {
+  type = list(object({
+    name        = string
+    description = string
+  }))
+  description = "OAuth2 scopes for the Cognito resource server"
+  default = [
+    { name = "read", description = "Read access" },
+    { name = "write", description = "Write access" },
+  ]
+}
+
+variable "required_scope" {
+  type        = string
+  description = "Scope name (without identifier prefix) required to call the API"
+  default     = "read"
 }
 
 variable "tags" {

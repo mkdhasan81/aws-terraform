@@ -4,10 +4,20 @@ variable "name_prefix" {
   default     = ""
 }
 
-variable "authorizer_token" {
+variable "jwks_uri" {
   type        = string
-  description = "Secret bearer token the authorizer validates against. Store in tfvars or secrets manager — never hardcode."
-  sensitive   = true
+  description = "Cognito JWKS endpoint for JWT signature verification"
+}
+
+variable "issuer" {
+  type        = string
+  description = "Cognito JWT issuer URL for iss claim validation"
+}
+
+variable "required_scope" {
+  type        = string
+  description = "OAuth2 scope required to access the API (e.g. 'https://api/read')"
+  default     = ""
 }
 
 variable "role_arn" {

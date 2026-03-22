@@ -20,7 +20,9 @@ resource "aws_lambda_function" "this" {
 
   environment {
     variables = {
-      AUTHORIZER_TOKEN = var.authorizer_token
+      JWKS_URI       = var.jwks_uri
+      ISSUER         = var.issuer
+      REQUIRED_SCOPE = var.required_scope
     }
   }
 
