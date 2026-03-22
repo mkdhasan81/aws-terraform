@@ -1,14 +1,12 @@
 locals {
   api_name = "${var.name}-api"
 
-  # Both root and proxy resource IDs wired to the same Lambda
   resources = {
     root  = aws_api_gateway_rest_api.this.root_resource_id
     proxy = aws_api_gateway_resource.proxy.id
   }
 
-  # Use CUSTOM auth when authorizer is provided, else NONE
-  authorization = var.authorizer_invoke_arn != "" ? "CUSTOM" : "NONE"
+  authorization = var.enable_authorizer ? "CUSTOM" : "NONE"
 }
 
 resource "aws_api_gateway_rest_api" "this" {
@@ -30,7 +28,7 @@ resource "aws_api_gateway_resource" "proxy" {
 
 # TOKEN-based Lambda authorizer — only created when authorizer_invoke_arn is set
 resource "aws_api_gateway_authorizer" "this" {
-  count = var.authorizer_invoke_arn != "" ? 1 : 0
+  count = var.enable_authorizer ? 1 : 0
 
   name                             = "${var.name}-authorizer"
   rest_api_id                      = aws_api_gateway_rest_api.this.id
@@ -48,7 +46,7 @@ resource "aws_api_gateway_method" "this" {
   resource_id   = each.value
   http_method   = "ANY"
   authorization = local.authorization
-  authorizer_id = var.authorizer_invoke_arn != "" ? aws_api_gateway_authorizer.this[0].id : null
+  authorizer_id = var.enable_authorizer ? aws_api_gateway_authorizer.this[0].id : null
 }
 
 resource "aws_api_gateway_integration" "this" {
@@ -134,7 +132,7 @@ resource "aws_lambda_permission" "this" {
 
 # Allow API Gateway to invoke the authorizer Lambda
 resource "aws_lambda_permission" "authorizer" {
-  count = var.authorizer_invoke_arn != "" ? 1 : 0
+  count = var.enable_authorizer ? 1 : 0
 
   statement_id  = "AllowAPIGatewayInvokeAuthorizer"
   action        = "lambda:InvokeFunction"

@@ -78,6 +78,7 @@ module "api_gateway" {
   stage_name               = local.env
   throttling_rate          = var.api_throttling_rate
   throttling_burst         = var.api_throttling_burst
+  enable_authorizer        = true
   authorizer_invoke_arn    = module.authorizer.invoke_arn
   authorizer_function_name = module.authorizer.function_name
   authorizer_role_arn      = module.iam_authorizer.api_gateway_invoker_role_arn

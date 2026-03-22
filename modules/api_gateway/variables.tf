@@ -21,6 +21,12 @@ variable "stage_name" {
 
 # ── Authorizer ────────────────────────────────────────────────────────────────
 
+variable "enable_authorizer" {
+  type        = bool
+  description = "Whether to enable the Lambda authorizer on all API methods"
+  default     = false
+}
+
 variable "authorizer_invoke_arn" {
   type        = string
   description = "Invoke ARN of the authorizer Lambda. Empty string disables the authorizer."

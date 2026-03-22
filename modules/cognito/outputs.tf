@@ -21,7 +21,7 @@ output "client_secret" {
 
 output "token_endpoint" {
   description = "OAuth2 token endpoint to request M2M tokens"
-  value       = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${aws_cognito_user_pool.this.endpoint != "" ? split(".", aws_cognito_user_pool.this.endpoint)[1] : "ap-southeast-1"}.amazoncognito.com/oauth2/token"
+  value       = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${split("_", aws_cognito_user_pool.this.id)[0]}.amazoncognito.com/oauth2/token"
 }
 
 output "jwks_uri" {
