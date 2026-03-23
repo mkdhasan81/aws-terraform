@@ -20,34 +20,12 @@ import os
 import time
 import urllib.request
 import urllib.error
-from base64 import b64decode, urlsafe_b64decode
+from base64 import urlsafe_b64decode
 
 # Simple in-memory JWKS cache — avoids fetching on every request
 _jwks_cache: dict = {}
 _jwks_cache_ttl: float = 0.0
 _CACHE_SECONDS = 3600  # refresh JWKS every hour
-
-# KMS decryption cache — persists across warm invocations
-_decrypted_cache: dict[str, str] = {}
-
-
-def _decrypt_env(env_var_name: str) -> str:
-    """Decrypt a KMS-encrypted environment variable, caching the result."""
-    if env_var_name in _decrypted_cache:
-        return _decrypted_cache[env_var_name]
-
-    ciphertext = os.environ.get(env_var_name, "")
-    if not ciphertext:
-        return ""
-
-    import boto3  # lazy import to minimise cold-start when not needed
-
-    kms_client = boto3.client("kms")
-    response = kms_client.decrypt(CiphertextBlob=b64decode(ciphertext))
-    plaintext = response["Plaintext"].decode("utf-8")
-
-    _decrypted_cache[env_var_name] = plaintext
-    return plaintext
 
 
 def handler(event, context):

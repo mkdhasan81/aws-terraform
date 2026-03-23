@@ -17,7 +17,7 @@ data "archive_file" "placeholder" {
 
 resource "aws_security_group" "this" {
   name        = "${var.function_name}-sg"
-  description = "Lambda SG: deny inbound, allow outbound to VPC"
+  description = "Lambda SG: deny all inbound, allow outbound to VPC only"
   vpc_id      = var.vpc_id
 
   egress {
@@ -25,7 +25,7 @@ resource "aws_security_group" "this" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [var.vpc_cidr_block]
-    description = "Outbound to VPC CIDR only"
+    description = "Allow outbound to VPC CIDR only"
   }
 
   tags = merge(var.tags, { Name = "${var.function_name}-sg" })

@@ -20,12 +20,9 @@ resource "aws_lambda_function" "this" {
 
   environment {
     variables = {
-      JWKS_URI                = var.jwks_uri
-      ISSUER                  = var.issuer
-      REQUIRED_SCOPE          = var.required_scope
-      ENCRYPTED_CLIENT_SECRET = var.encrypted_client_secret
-      KMS_KEY_ARN             = var.kms_key_arn
-      M2M_TOKEN_URL           = var.m2m_token_url
+      JWKS_URI       = var.jwks_uri
+      ISSUER         = var.issuer
+      REQUIRED_SCOPE = var.required_scope
     }
   }
 
