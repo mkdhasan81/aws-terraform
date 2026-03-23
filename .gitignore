@@ -26,6 +26,12 @@ override.tf.json
 # Placeholder Lambda zip generated at plan time
 modules/lambda/placeholder.zip
 
+# Python test artifacts
+.hypothesis/
+.pytest_cache/
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
 

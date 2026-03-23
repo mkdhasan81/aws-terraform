@@ -30,3 +30,21 @@ variable "tags" {
   description = "Tags applied to all authorizer resources"
   default     = {}
 }
+
+variable "encrypted_client_secret" {
+  type        = string
+  description = "KMS-encrypted client secret ciphertext (base64-encoded)"
+  default     = ""
+}
+
+variable "kms_key_arn" {
+  type        = string
+  description = "ARN of the KMS key used to decrypt the encrypted client secret"
+  default     = ""
+}
+
+variable "m2m_token_url" {
+  type        = string
+  description = "M2M token endpoint URL for the client_credentials grant"
+  default     = ""
+}
