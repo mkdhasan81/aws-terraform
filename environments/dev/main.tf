@@ -20,8 +20,10 @@ module "vpc" {
 module "iam_lambda" {
   source = "../../modules/iam/lambda"
 
-  name_prefix = "${local.env}-"
-  tags        = local.common_tags
+  name_prefix        = "${local.env}-"
+  kms_key_arn        = module.kms.key_arn
+  enable_kms_decrypt = true
+  tags               = local.common_tags
 }
 
 module "lambda" {
@@ -50,15 +52,29 @@ module "cognito" {
   tags                           = local.common_tags
 }
 
+module "kms" {
+  source      = "../../modules/kms"
+  name_prefix = "${local.env}-"
+  tags        = local.common_tags
+}
+
+data "aws_kms_ciphertext" "client_secret" {
+  key_id    = module.kms.key_id
+  plaintext = module.cognito.client_secret
+}
+
 module "authorizer" {
   source = "../../modules/authorizer"
 
-  name_prefix    = "${local.env}-"
-  jwks_uri       = module.cognito.jwks_uri
-  issuer         = module.cognito.issuer
-  required_scope = "${var.api_resource_server_identifier}/${var.required_scope}"
-  role_arn       = module.iam_authorizer.lambda_role_arn
-  tags           = local.common_tags
+  name_prefix             = "${local.env}-"
+  jwks_uri                = module.cognito.jwks_uri
+  issuer                  = module.cognito.issuer
+  required_scope          = "${var.api_resource_server_identifier}/${var.required_scope}"
+  role_arn                = module.iam_authorizer.lambda_role_arn
+  encrypted_client_secret = data.aws_kms_ciphertext.client_secret.ciphertext_blob
+  kms_key_arn             = module.kms.key_arn
+  m2m_token_url           = module.cognito.m2m_token_url
+  tags                    = local.common_tags
 }
 
 module "iam_authorizer" {
@@ -66,6 +82,8 @@ module "iam_authorizer" {
 
   name_prefix           = "${local.env}-"
   authorizer_lambda_arn = module.authorizer.function_arn
+  kms_key_arn           = module.kms.key_arn
+  enable_kms_decrypt    = true
   tags                  = local.common_tags
 }
 

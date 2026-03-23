@@ -64,3 +64,19 @@ resource "aws_iam_role_policy" "invoke_authorizer" {
     }]
   })
 }
+
+resource "aws_iam_role_policy" "kms_decrypt" {
+  count = var.enable_kms_decrypt ? 1 : 0
+
+  name = "kms-decrypt"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "kms:Decrypt"
+      Resource = var.kms_key_arn
+    }]
+  })
+}

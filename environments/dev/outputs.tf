@@ -53,8 +53,12 @@ output "cognito_client_id" {
   value       = module.cognito.client_id
 }
 
-output "cognito_client_secret" {
-  description = "Cognito M2M app client secret (sensitive)"
-  value       = module.cognito.client_secret
-  sensitive   = true
+output "m2m_token_url" {
+  description = "M2M token endpoint URL for client_credentials grant"
+  value       = module.cognito.m2m_token_url
+}
+
+output "cognito_client_secret_encrypted" {
+  description = "KMS-encrypted Cognito client secret (base64-encoded ciphertext)"
+  value       = data.aws_kms_ciphertext.client_secret.ciphertext_blob
 }
